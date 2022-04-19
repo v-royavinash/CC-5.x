@@ -15,6 +15,7 @@ function WriteI{
     Write-Host $message -foregroundcolor white
 }
 
+
 # write error
 function WriteE{
     param(
