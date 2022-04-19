@@ -64,5 +64,10 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator.Data.Func.Services.Notificati
             return NotificationStatus.Failed.ToString().Equals(this.Status) ||
                 NotificationStatus.Sent.ToString().Equals(this.Status);
         }
+
+        /// <summary>
+        /// Gets or sets the number or recipients who have canceled status.
+        /// </summary>
+        public int? Canceled { get; set; }
     }
 }
