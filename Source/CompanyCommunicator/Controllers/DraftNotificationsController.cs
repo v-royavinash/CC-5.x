@@ -2,23 +2,28 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 // </copyright>
+using Azure.Storage.Sas;
 
 namespace Microsoft.Teams.Apps.CompanyCommunicator.Controllers
 {
     using System;
     using System.Collections.Generic;
+    using System.IO;
     using System.Linq;
     using System.Security.Claims;
     using System.Threading.Tasks;
+    
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.Extensions.Localization;
     using Microsoft.Teams.Apps.CompanyCommunicator.Authentication;
+    using Microsoft.Teams.Apps.CompanyCommunicator.Common.Clients;
     using Microsoft.Teams.Apps.CompanyCommunicator.Common.Repositories.NotificationData;
     using Microsoft.Teams.Apps.CompanyCommunicator.Common.Repositories.TeamData;
     using Microsoft.Teams.Apps.CompanyCommunicator.Common.Resources;
     using Microsoft.Teams.Apps.CompanyCommunicator.Common.Services;
     using Microsoft.Teams.Apps.CompanyCommunicator.Common.Services.MicrosoftGraph;
+    using Microsoft.Teams.Apps.CompanyCommunicator.Controllers.Options;
     using Microsoft.Teams.Apps.CompanyCommunicator.DraftNotificationPreview;
     using Microsoft.Teams.Apps.CompanyCommunicator.Models;
     using Microsoft.Teams.Apps.CompanyCommunicator.Repositories.Extensions;
@@ -36,6 +41,8 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator.Controllers
         private readonly IGroupsService groupsService;
         private readonly IAppSettingsService appSettingsService;
         private readonly IStringLocalizer<Strings> localizer;
+        private readonly UserAppOptions userAppOptions;
+        private readonly IStorageClientFactory storageClientFactory;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DraftNotificationsController"/> class.
@@ -60,6 +67,7 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator.Controllers
             this.localizer = localizer ?? throw new ArgumentNullException(nameof(localizer));
             this.groupsService = groupsService ?? throw new ArgumentNullException(nameof(groupsService));
             this.appSettingsService = appSettingsService ?? throw new ArgumentNullException(nameof(appSettingsService));
+            this.storageClientFactory = storageClientFactory ?? throw new ArgumentNullException(nameof(storageClientFactory));
         }
 
         /// <summary>
@@ -84,6 +92,11 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator.Controllers
             if (containsHiddenMembership)
             {
                 return this.Forbid();
+            }
+
+            if (!this.CheckUrl(notification.ImageLink))
+            {
+                await this.UploadToBlobStorage(notification);
             }
 
             var notificationId = await this.notificationDataRepository.CreateDraftNotificationAsync(
@@ -140,6 +153,11 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator.Controllers
             if (!notification.Validate(this.localizer, out string errorMessage))
             {
                 return this.BadRequest(errorMessage);
+            }
+
+            if (!string.IsNullOrWhiteSpace(notification.ImageLink) && notification.ImageLink.StartsWith("data:image/"))
+            {
+                await this.UploadToBlobStorage(notification);
             }
 
             var notificationEntity = new NotificationDataEntity
@@ -350,5 +368,49 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator.Controllers
 
             return notificationEntity;
         }
+
+        private async Task UploadToBlobStorage(DraftNotification notification)
+        {
+            if (!string.IsNullOrWhiteSpace(notification.ImageLink))
+            {
+                var offset = notification.ImageLink.IndexOf(',') + 1;
+                var imageBytes = Convert.FromBase64String(notification.ImageLink[offset..^0]);
+
+                await using var stream = new MemoryStream(imageBytes, writable: false);
+                var blobContainerClient = this.storageClientFactory.CreateBlobContainerClient("imageupload");
+                await blobContainerClient.CreateIfNotExistsAsync();
+
+                var blob = blobContainerClient.GetBlobClient(Guid.NewGuid().ToString() + ".jpg");
+                await blob.UploadAsync(stream, true);
+
+                if (blobContainerClient.CanGenerateSasUri)
+                {
+                    // Create a SAS token that's valid for one hour.
+                    BlobSasBuilder sasBuilder = new BlobSasBuilder()
+                    {
+                        BlobContainerName = blobContainerClient.Name,
+                        BlobName = blob.Name,
+                        Resource = "b"
+                    };
+
+                    sasBuilder.ExpiresOn = DateTimeOffset.UtcNow.AddDays(this.userAppOptions.ImageUploadBlobStorageSasDurationDays);
+                    sasBuilder.SetPermissions(BlobSasPermissions.Read);
+
+                    notification.ImageLink = blob.GenerateSasUri(sasBuilder).AbsoluteUri;
+                }
+            }
+        }
+
+        private bool CheckUrl(string urlString)
+        {
+            Uri uriResult;
+
+            if (Uri.TryCreate(urlString, UriKind.Absolute, out uriResult))
+            {
+                return uriResult.Scheme == Uri.UriSchemeHttps;
+            }
+            return false;
+        }
+
     }
 }

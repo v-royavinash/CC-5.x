@@ -87,6 +87,7 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator
                     botOptions.UserAppCertName = configuration.GetValue<string>("UserAppCertName", string.Empty);
                     botOptions.GraphAppId = configuration.GetValue<string>("GraphAppId");
                     botOptions.GraphAppCertName = configuration.GetValue<string>("GraphAppCertName", string.Empty);
+                    botOptions.ImageUploadBlobStorage = configuration.GetValue<bool>("ImageUploadBlobStorage");
                 });
             services.AddOptions<BotFilterMiddlewareOptions>()
                 .Configure<IConfiguration>((botFilterMiddlewareOptions, configuration) =>
@@ -121,6 +122,9 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator
 
                     options.UserAppExternalId =
                         configuration.GetValue<string>("UserAppExternalId", "148a66bb-e83d-425a-927d-09f4299a9274");
+
+                    options.ImageUploadBlobStorageSasDurationDays =
+                        configuration.GetValue<int>("ImageUploadBlobStorageSasDurationDays", 365);
                 });
 
             services.AddOptions();

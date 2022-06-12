@@ -84,6 +84,8 @@ export interface INewMessageProps extends RouteComponentProps, WithTranslation {
 class NewMessage extends React.Component<INewMessageProps, formState> {
     readonly localize: TFunction;
     private card: any;
+    fileInput: any;
+    imageSize: number;
 
     constructor(props: INewMessageProps) {
         super(props);
@@ -91,6 +93,7 @@ class NewMessage extends React.Component<INewMessageProps, formState> {
         this.localize = this.props.t;
         this.card = getInitAdaptiveCard(this.localize);
         this.setDefaultCard(this.card);
+        this.imageSize = 0;
 
         this.state = {
             title: "",
@@ -106,7 +109,7 @@ class NewMessage extends React.Component<INewMessageProps, formState> {
             allUsersOptionSelected: false,
             groupsOptionSelected: false,
             messageId: "",
-            loader: true,
+            loader: false,
             groupAccess: false,
             loading: false,
             noResultMessage: "",
@@ -121,6 +124,9 @@ class NewMessage extends React.Component<INewMessageProps, formState> {
             errorImageUrlMessage: "",
             errorButtonUrlMessage: "",
         }
+
+        this.fileInput = React.createRef();
+        this.handleImageSelection = this.handleImageSelection.bind(this);
     }
 
     public async componentDidMount() {
@@ -314,6 +320,40 @@ class NewMessage extends React.Component<INewMessageProps, formState> {
         }
     }
 
+    //Function calling a click event on a hidden file input
+    private handleUploadClick = (event: any) => {
+        //reset the error message and the image link as the upload will reset them potentially
+        this.setState({
+            errorImageUrlMessage: "",
+            imageLink: ""
+        });
+        setCardImageLink(this.card, "");
+        //fire the fileinput click event and run the handleimageselection function
+        this.fileInput.current.click();
+    };
+
+    //function to handle the selection of the OS file upload box
+    private handleImageSelection() {
+        //get the first file selected
+        const file = this.fileInput.current.files[0];
+        if (file) { //if we have a file
+            var cardsize = JSON.stringify(this.card).length;
+                var that = this;
+                var reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onloadend = function () {
+                    var base64String = reader.result as string;
+                    that.imageSize =  base64String.toString().length;
+                    cardsize = cardsize - that.imageSize;
+                    setCardImageLink(that.card, base64String.toString());
+                    that.updateCard();
+                    that.setState({
+                        imageLink: base64String.toString()
+                    });
+                }
+        }
+    }
+
     public componentWillUnmount() {
         document.removeEventListener("keydown", this.escFunction, false);
     }
@@ -342,15 +382,42 @@ class NewMessage extends React.Component<INewMessageProps, formState> {
                                             fluid
                                         />
 
+                                    <Flex gap="gap.small" vAlign="end">
                                         <Input fluid className="inputField"
-                                            value={this.state.imageLink}
-                                            label={this.localize("ImageURL")}
-                                            placeholder={this.localize("ImageURL")}
-                                            onChange={this.onImageLinkChanged}
-                                            error={!(this.state.errorImageUrlMessage === "")}
-                                            autoComplete="off"
-                                        />
-                                        <Text className={(this.state.errorImageUrlMessage === "") ? "hide" : "show"} error size="small" content={this.state.errorImageUrlMessage} />
+                                                value={this.state.imageLink}
+                                                label={this.localize("ImageURL")}
+                                                placeholder={this.localize("ImageURL")}
+                                                onChange={this.onImageLinkChanged}
+                                                error={!(this.state.errorImageUrlMessage === "")}
+                                                autoComplete="off"
+                                            />
+                                            <Flex.Item push>
+                                                <Button onClick={this.handleUploadClick}
+                                                        size="medium" className="inputField"
+                                                        content={this.localize("Upload")} iconPosition="before" />
+                                            </Flex.Item>
+                                            <input type="file" accept=".jpg, .jpeg, .png, .gif"
+                                                style={{ display: 'none' }}
+                                                multiple={false}
+                                                onChange={this.handleImageSelection}
+                                                ref={this.fileInput} />
+                                            <Text className={(this.state.errorImageUrlMessage === "") ? "hide" : "show"} error size="small" content={this.state.errorImageUrlMessage} />
+                                    
+                                    </Flex>
+                                         
+                                        {/* <Text className={(this.state.errorImageUrlMessage === "") ? "hide" : "show"} error size="small" content={this.state.errorImageUrlMessage} />
+
+                                        <input type="file" accept="image/"
+                                                style={{ display: 'none' }}
+                                                onChange={this.handleImageSelection}
+                                                ref={this.fileInput} />
+                                            <Flex.Item push>
+                                                <Button circular onClick={this.handleUploadClick}
+                                                    size="small"
+                                                    name={this.localize("Upload")}
+                                                    title={this.localize("UploadImage")}
+                                                />
+                                            </Flex.Item> */}
 
                                         <div className="textArea">
                                             <Text content={this.localize("Summary")} />
