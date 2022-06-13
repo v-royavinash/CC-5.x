@@ -84,8 +84,7 @@ export interface INewMessageProps extends RouteComponentProps, WithTranslation {
 class NewMessage extends React.Component<INewMessageProps, formState> {
     readonly localize: TFunction;
     private card: any;
-    fileInput: any;
-    imageSize: number;
+    private fileInput: any;
 
     constructor(props: INewMessageProps) {
         super(props);
@@ -93,7 +92,6 @@ class NewMessage extends React.Component<INewMessageProps, formState> {
         this.localize = this.props.t;
         this.card = getInitAdaptiveCard(this.localize);
         this.setDefaultCard(this.card);
-        this.imageSize = 0;
 
         this.state = {
             title: "",
@@ -109,7 +107,7 @@ class NewMessage extends React.Component<INewMessageProps, formState> {
             allUsersOptionSelected: false,
             groupsOptionSelected: false,
             messageId: "",
-            loader: false,
+            loader: true,
             groupAccess: false,
             loading: false,
             noResultMessage: "",
@@ -320,42 +318,56 @@ class NewMessage extends React.Component<INewMessageProps, formState> {
         }
     }
 
-    //Function calling a click event on a hidden file input
-    private handleUploadClick = (event: any) => {
-        //reset the error message and the image link as the upload will reset them potentially
-        this.setState({
-            errorImageUrlMessage: "",
-            imageLink: ""
-        });
-        setCardImageLink(this.card, "");
-        //fire the fileinput click event and run the handleimageselection function
-        this.fileInput.current.click();
-    };
+    public componentWillUnmount() {
+        document.removeEventListener("keydown", this.escFunction, false);
+    }
 
-    //function to handle the selection of the OS file upload box
-    private handleImageSelection() {
-        //get the first file selected
-        const file = this.fileInput.current.files[0];
-        if (file) { //if we have a file
-            var cardsize = JSON.stringify(this.card).length;
-                var that = this;
-                var reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onloadend = function () {
-                    var base64String = reader.result as string;
-                    that.imageSize =  base64String.toString().length;
-                    cardsize = cardsize - that.imageSize;
-                    setCardImageLink(that.card, base64String.toString());
-                    that.updateCard();
-                    that.setState({
-                        imageLink: base64String.toString()
-                    });
-                }
+    private handleUploadClick = (event: any) => {
+        if (this.fileInput.current) {
+            this.fileInput.current.click();
         }
     }
 
-    public componentWillUnmount() {
-        document.removeEventListener("keydown", this.escFunction, false);
+    private handleImageSelection() {
+
+        const file = this.fileInput.current.files[0];
+        const { type: mimeType } = file;
+        const fileReader = new FileReader();
+
+        fileReader.readAsDataURL(file);
+        fileReader.onload = () => {
+            var image = new Image();
+            image.src = fileReader.result as string;
+            var resizedImageAsBase64 = fileReader.result as string;
+
+            image.onload = function (e: any) {
+                const MAX_WIDTH = 1024;
+                // access image size here 
+
+                if (image.width > MAX_WIDTH) {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = MAX_WIDTH;
+                    canvas.height = ~~(image.height * (MAX_WIDTH / image.width));
+                    const context = canvas.getContext('2d', { alpha: false });
+                    if (!context) {
+                        return;
+                    }
+                    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+                    resizedImageAsBase64 = canvas.toDataURL(mimeType);
+                }
+            }
+
+            setCardImageLink(this.card, resizedImageAsBase64);
+            this.updateCard();
+
+            this.setState({
+                imageLink: resizedImageAsBase64
+            });
+        }
+
+        fileReader.onerror = (error) => {
+            //reject(error);
+        }
     }
 
     public render(): JSX.Element {
@@ -382,8 +394,8 @@ class NewMessage extends React.Component<INewMessageProps, formState> {
                                             fluid
                                         />
 
-                                    <Flex gap="gap.small" vAlign="end">
-                                        <Input fluid className="inputField"
+                                        <Flex gap="gap.small" vAlign="end">
+                                            <Input fluid className="inputField"
                                                 value={this.state.imageLink}
                                                 label={this.localize("ImageURL")}
                                                 placeholder={this.localize("ImageURL")}
@@ -393,8 +405,8 @@ class NewMessage extends React.Component<INewMessageProps, formState> {
                                             />
                                             <Flex.Item push>
                                                 <Button onClick={this.handleUploadClick}
-                                                        size="medium" className="inputField"
-                                                        content={this.localize("Upload")} iconPosition="before" />
+                                                    size="medium" className="inputField"
+                                                    content={this.localize("UploadImage")} iconPosition="before" />
                                             </Flex.Item>
                                             <input type="file" accept=".jpg, .jpeg, .png, .gif"
                                                 style={{ display: 'none' }}
@@ -402,23 +414,7 @@ class NewMessage extends React.Component<INewMessageProps, formState> {
                                                 onChange={this.handleImageSelection}
                                                 ref={this.fileInput} />
                                             <Text className={(this.state.errorImageUrlMessage === "") ? "hide" : "show"} error size="small" content={this.state.errorImageUrlMessage} />
-                                    
-                                    </Flex>
-                                         
-                                        {/* <Text className={(this.state.errorImageUrlMessage === "") ? "hide" : "show"} error size="small" content={this.state.errorImageUrlMessage} />
-
-                                        <input type="file" accept="image/"
-                                                style={{ display: 'none' }}
-                                                onChange={this.handleImageSelection}
-                                                ref={this.fileInput} />
-                                            <Flex.Item push>
-                                                <Button circular onClick={this.handleUploadClick}
-                                                    size="small"
-                                                    name={this.localize("Upload")}
-                                                    title={this.localize("UploadImage")}
-                                                />
-                                            </Flex.Item> */}
-
+                                        </Flex>
                                         <div className="textArea">
                                             <Text content={this.localize("Summary")} />
                                             <TextArea

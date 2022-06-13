@@ -123,9 +123,6 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator
 
                     options.UserAppExternalId =
                         configuration.GetValue<string>("UserAppExternalId", "148a66bb-e83d-425a-927d-09f4299a9274");
-
-                    options.ImageUploadBlobStorageSasDurationDays =
-                        configuration.GetValue<int>("ImageUploadBlobStorageSasDurationDays", 365);
                 });
 
             services.AddOptions();
@@ -200,7 +197,6 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator
             services.AddTransient<ITeamMembersService, TeamMembersService>();
             services.AddTransient<ICCBotFrameworkHttpAdapter, CCBotFrameworkHttpAdapter>();
 
-            services.AddTransient<IStorageClientFactory, StorageClientFactory>();
         }
 
         /// <summary>
