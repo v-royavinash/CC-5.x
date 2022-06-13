@@ -406,7 +406,7 @@ class NewMessage extends React.Component<INewMessageProps, formState> {
                                             <Flex.Item push>
                                                 <Button onClick={this.handleUploadClick}
                                                     size="medium" className="inputField"
-                                                    content={this.localize("UploadImage")} iconPosition="before" />
+                                                    content={this.localize("Upload")} iconPosition="before" />
                                             </Flex.Item>
                                             <input type="file" accept=".jpg, .jpeg, .png, .gif"
                                                 style={{ display: 'none' }}
