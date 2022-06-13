@@ -16,6 +16,7 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator.Controllers
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.Extensions.Localization;
+    using Microsoft.Extensions.Options;
     using Microsoft.Teams.Apps.CompanyCommunicator.Authentication;
     using Microsoft.Teams.Apps.CompanyCommunicator.Common.Clients;
     using Microsoft.Teams.Apps.CompanyCommunicator.Common.Repositories.NotificationData;
@@ -53,6 +54,8 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator.Controllers
         /// <param name="appSettingsService">App Settings service.</param>
         /// <param name="localizer">Localization service.</param>
         /// <param name="groupsService">group service.</param>
+        /// <param name="userAppOptions">user app options.</param>
+        /// <param name="storageClientFactory">Storage Library.</param>
         public DraftNotificationsController(
             INotificationDataRepository notificationDataRepository,
             ITeamDataRepository teamDataRepository,
@@ -60,7 +63,8 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator.Controllers
             IAppSettingsService appSettingsService,
             IStringLocalizer<Strings> localizer,
             IGroupsService groupsService,
-            IStorageClientFactory storageClientFactory)
+            IStorageClientFactory storageClientFactory,
+            IOptions<UserAppOptions> userAppOptions)
         {
             this.notificationDataRepository = notificationDataRepository ?? throw new ArgumentNullException(nameof(notificationDataRepository));
             this.teamDataRepository = teamDataRepository ?? throw new ArgumentNullException(nameof(teamDataRepository));
@@ -68,6 +72,7 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator.Controllers
             this.localizer = localizer ?? throw new ArgumentNullException(nameof(localizer));
             this.groupsService = groupsService ?? throw new ArgumentNullException(nameof(groupsService));
             this.appSettingsService = appSettingsService ?? throw new ArgumentNullException(nameof(appSettingsService));
+            this.userAppOptions = userAppOptions?.Value ?? throw new ArgumentNullException(nameof(userAppOptions));
             this.storageClientFactory = storageClientFactory ?? throw new ArgumentNullException(nameof(storageClientFactory));
         }
 
