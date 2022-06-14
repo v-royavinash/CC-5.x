@@ -84,6 +84,7 @@ export interface INewMessageProps extends RouteComponentProps, WithTranslation {
 class NewMessage extends React.Component<INewMessageProps, formState> {
     readonly localize: TFunction;
     private card: any;
+    private fileInput: any;
 
     constructor(props: INewMessageProps) {
         super(props);
@@ -106,7 +107,7 @@ class NewMessage extends React.Component<INewMessageProps, formState> {
             allUsersOptionSelected: false,
             groupsOptionSelected: false,
             messageId: "",
-            loader: true,
+            loader: false,
             groupAccess: false,
             loading: false,
             noResultMessage: "",
@@ -121,6 +122,9 @@ class NewMessage extends React.Component<INewMessageProps, formState> {
             errorImageUrlMessage: "",
             errorButtonUrlMessage: "",
         }
+
+        this.fileInput = React.createRef();
+        this.handleImageSelection = this.handleImageSelection.bind(this);
     }
 
     public async componentDidMount() {
@@ -318,6 +322,54 @@ class NewMessage extends React.Component<INewMessageProps, formState> {
         document.removeEventListener("keydown", this.escFunction, false);
     }
 
+    private handleUploadClick = (event: any) => {
+        if (this.fileInput.current) {
+            this.fileInput.current.click();
+        }
+    }
+
+    private handleImageSelection() {
+
+        const file = this.fileInput.current.files[0];
+        const { type: mimeType } = file;
+        const fileReader = new FileReader();
+
+        fileReader.readAsDataURL(file);
+        fileReader.onload = () => {
+            var image = new Image();
+            image.src = fileReader.result as string;
+            var resizedImageAsBase64 = fileReader.result as string;
+
+            image.onload = function (e: any) {
+                const MAX_WIDTH = 1024;
+                // access image size here 
+
+                if (image.width > MAX_WIDTH) {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = MAX_WIDTH;
+                    canvas.height = ~~(image.height * (MAX_WIDTH / image.width));
+                    const context = canvas.getContext('2d', { alpha: false });
+                    if (!context) {
+                        return;
+                    }
+                    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+                    resizedImageAsBase64 = canvas.toDataURL(mimeType);
+                }
+            }
+
+            setCardImageLink(this.card, resizedImageAsBase64);
+            this.updateCard();
+
+            this.setState({
+                imageLink: resizedImageAsBase64
+            });
+        }
+
+        fileReader.onerror = (error) => {
+            //reject(error);
+        }
+    }
+
     public render(): JSX.Element {
         if (this.state.loader) {
             return (
@@ -342,16 +394,27 @@ class NewMessage extends React.Component<INewMessageProps, formState> {
                                             fluid
                                         />
 
-                                        <Input fluid className="inputField"
-                                            value={this.state.imageLink}
-                                            label={this.localize("ImageURL")}
-                                            placeholder={this.localize("ImageURL")}
-                                            onChange={this.onImageLinkChanged}
-                                            error={!(this.state.errorImageUrlMessage === "")}
-                                            autoComplete="off"
-                                        />
-                                        <Text className={(this.state.errorImageUrlMessage === "") ? "hide" : "show"} error size="small" content={this.state.errorImageUrlMessage} />
-
+                                        <Flex gap="gap.small" vAlign="end">
+                                            <Input fluid className="inputField"
+                                                value={this.state.imageLink}
+                                                label={this.localize("ImageURL")}
+                                                placeholder={this.localize("ImageURL")}
+                                                onChange={this.onImageLinkChanged}
+                                                error={!(this.state.errorImageUrlMessage === "")}
+                                                autoComplete="off"
+                                            />
+                                            <Flex.Item push>
+                                                <Button onClick={this.handleUploadClick}
+                                                    size="medium" className="inputField"
+                                                    content={this.localize("Upload")} iconPosition="before" />
+                                            </Flex.Item>
+                                            <input type="file" accept=".jpg, .jpeg, .png, .gif"
+                                                style={{ display: 'none' }}
+                                                multiple={false}
+                                                onChange={this.handleImageSelection}
+                                                ref={this.fileInput} />
+                                            <Text className={(this.state.errorImageUrlMessage === "") ? "hide" : "show"} error size="small" content={this.state.errorImageUrlMessage} />
+                                        </Flex>
                                         <div className="textArea">
                                             <Text content={this.localize("Summary")} />
                                             <TextArea
