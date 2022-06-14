@@ -88,7 +88,6 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator
                     botOptions.UserAppCertName = configuration.GetValue<string>("UserAppCertName", string.Empty);
                     botOptions.GraphAppId = configuration.GetValue<string>("GraphAppId");
                     botOptions.GraphAppCertName = configuration.GetValue<string>("GraphAppCertName", string.Empty);
-                    botOptions.ImageUploadBlobStorage = configuration.GetValue<bool>("ImageUploadBlobStorage");
                 });
             services.AddOptions<BotFilterMiddlewareOptions>()
                 .Configure<IConfiguration>((botFilterMiddlewareOptions, configuration) =>
