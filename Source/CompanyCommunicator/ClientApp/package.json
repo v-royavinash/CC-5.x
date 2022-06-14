@@ -28,7 +28,8 @@
     "redux-thunk": "^2.3.0",
     "sass": "^1.32.7",
     "typescript": "3.5.1",
-    "typestyle": "^2.0.2"
+    "typestyle": "^2.0.2",
+    "react-image-file-resizer": "^0.3.8"
   },
   "scripts": {
     "start": "react-scripts start",

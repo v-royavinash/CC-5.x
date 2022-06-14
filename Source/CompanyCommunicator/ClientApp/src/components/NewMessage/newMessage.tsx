@@ -19,6 +19,9 @@ import {
 import { getBaseUrl } from '../../configVariables';
 import { ImageUtil } from '../../utility/imageutility';
 import { TFunction } from "i18next";
+import Resizer from 'react-image-file-resizer';
+
+const maxCardSize = 30720;
 
 type dropdownItem = {
     key: string,
@@ -85,6 +88,7 @@ class NewMessage extends React.Component<INewMessageProps, formState> {
     readonly localize: TFunction;
     private card: any;
     private fileInput: any;
+    private imageSize: number;
 
     constructor(props: INewMessageProps) {
         super(props);
@@ -92,6 +96,8 @@ class NewMessage extends React.Component<INewMessageProps, formState> {
         this.localize = this.props.t;
         this.card = getInitAdaptiveCard(this.localize);
         this.setDefaultCard(this.card);
+        this.imageSize = 0;
+
 
         this.state = {
             title: "",
@@ -107,7 +113,7 @@ class NewMessage extends React.Component<INewMessageProps, formState> {
             allUsersOptionSelected: false,
             groupsOptionSelected: false,
             messageId: "",
-            loader: false,
+            loader: true,
             groupAccess: false,
             loading: false,
             noResultMessage: "",
@@ -329,46 +335,73 @@ class NewMessage extends React.Component<INewMessageProps, formState> {
     }
 
     private handleImageSelection() {
-
+        //get the first file selected
         const file = this.fileInput.current.files[0];
-        const { type: mimeType } = file;
-        const fileReader = new FileReader();
+        if (file) { //if we have a file
+            var cardsize = JSON.stringify(this.card).length;
 
-        fileReader.readAsDataURL(file);
-        fileReader.onload = () => {
-            var image = new Image();
-            image.src = fileReader.result as string;
-            var resizedImageAsBase64 = fileReader.result as string;
-
-            image.onload = function (e: any) {
-                const MAX_WIDTH = 1024;
-                // access image size here 
-
-                if (image.width > MAX_WIDTH) {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = MAX_WIDTH;
-                    canvas.height = ~~(image.height * (MAX_WIDTH / image.width));
-                    const context = canvas.getContext('2d', { alpha: false });
-                    if (!context) {
-                        return;
+            Resizer.imageFileResizer(file, 400, 400, 'JPEG', 80, 0,
+                uri => {
+                    if (uri.toString().length < maxCardSize - cardsize) {
+                        setCardImageLink(this.card, uri.toString());
+                        this.updateCard();
+                        //lets set the state with the image value
+                        this.setState({
+                            imageLink: uri.toString()
+                        }
+                        );
+                    } else {
+                        var errormsg = this.localize("ErrorImageTooBig") + " " + this.localize("ErrorImageTooBigSize") + " " + (maxCardSize - cardsize) + " bytes.";
+                        //images bigger than 32K cannot be saved, set the error message to be presented
+                        this.setState({
+                            errorImageUrlMessage: errormsg
+                        });
                     }
-                    context.drawImage(image, 0, 0, canvas.width, canvas.height);
-                    resizedImageAsBase64 = canvas.toDataURL(mimeType);
-                }
-            }
-
-            setCardImageLink(this.card, resizedImageAsBase64);
-            this.updateCard();
-
-            this.setState({
-                imageLink: resizedImageAsBase64
-            });
-        }
-
-        fileReader.onerror = (error) => {
-            //reject(error);
+                }, 'base64'); //we need the image in base64
         }
     }
+
+    // private handleImageSelection() {
+
+    //     const file = this.fileInput.current.files[0];
+    //     const { type: mimeType } = file;
+    //     const fileReader = new FileReader();
+
+    //     fileReader.readAsDataURL(file);
+    //     fileReader.onload = () => {
+    //         var image = new Image();
+    //         image.src = fileReader.result as string;
+    //         var resizedImageAsBase64 = fileReader.result as string;
+
+    //         image.onload = function (e: any) {
+    //             const MAX_WIDTH = 1024;
+    //             // access image size here 
+
+    //             if (image.width > MAX_WIDTH) {
+    //                 const canvas = document.createElement('canvas');
+    //                 canvas.width = MAX_WIDTH;
+    //                 canvas.height = ~~(image.height * (MAX_WIDTH / image.width));
+    //                 const context = canvas.getContext('2d', { alpha: false });
+    //                 if (!context) {
+    //                     return;
+    //                 }
+    //                 context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    //                 resizedImageAsBase64 = canvas.toDataURL(mimeType);
+    //             }
+    //         }
+
+    //         setCardImageLink(this.card, resizedImageAsBase64);
+    //         this.updateCard();
+
+    //         this.setState({
+    //             imageLink: resizedImageAsBase64
+    //         });
+    //     }
+
+    //     fileReader.onerror = (error) => {
+    //         //reject(error);
+    //     }
+    // }
 
     public render(): JSX.Element {
         if (this.state.loader) {
