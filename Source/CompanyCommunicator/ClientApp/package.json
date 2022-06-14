@@ -29,7 +29,8 @@
     "sass": "^1.32.7",
     "typescript": "3.5.1",
     "typestyle": "^2.0.2",
-    "react-image-file-resizer": "^0.3.8"
+    "react-image-file-resizer": "^0.3.8",
+    "markdown-it": "^12.0.6"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -66,6 +67,7 @@
     "@types/react-router-dom": "^4.3.3",
     "@types/redux": "^3.6.0",
     "tslint": "^5.20.0",
-    "tslint-microsoft-contrib": "6.2.0"
+    "tslint-microsoft-contrib": "6.2.0",
+    "@types/markdown-it": "^12.0.1"
   }
 }
